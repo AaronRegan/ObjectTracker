@@ -3,6 +3,7 @@ import cv2
 import argparse
 import imutils
 from myqueue import myqueue
+from frames import frames
 import time
 
 
@@ -21,13 +22,14 @@ def main():
     else:
         print("[INFO] starting video file thread...")
         camera = myqueue(args["video"]).start()
-        time.sleep(0.1)
+        time.sleep(1.0)
+
+    fps = frames().start()
 
     while camera.more():
         frame = camera.read()
         frame = imutils.resize(frame, width=450)
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        frame = np.dstack([frame, frame, frame])
         cv2.putText(frame, "Queue Size: {}".format(camera.Q.qsize()),
                     (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
         fullbody = fullbody_cascade.detectMultiScale(gray, 1.3, 5)
@@ -37,9 +39,14 @@ def main():
             roi_color = frame[y:y + h, x:x + w]
 
         cv2.imshow("HaarCascade", frame)
+        cv2.waitKey(1)
+        fps.update()
         k = cv2.waitKey(27) & 0xff
         if k == 27:
             break
+    fps.stop()
+    print("[INFO] elapsed time: {:.2f}".format(fps.elapsed()))
+    print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
     cv2.destroyAllWindows()
     camera.stop()
 
