@@ -5,7 +5,7 @@ import imutils
 from myqueue import myqueue
 from frames import frames
 import time
-
+#to do speed up FPS
 
 def main():
     fullbody_cascade = cv2.CascadeClassifier(
