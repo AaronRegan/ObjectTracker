@@ -28,7 +28,7 @@ def main():
 
     while camera.more():
         frame = camera.read()
-        frame = imutils.resize(frame, width=450)
+        frame = imutils.resize(frame, width=400)
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         cv2.putText(frame, "Queue Size: {}".format(camera.Q.qsize()),
                     (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
@@ -37,7 +37,8 @@ def main():
             cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
             roi_gray = gray[y:y + h, x:x + w]
             roi_color = frame[y:y + h, x:x + w]
-
+        peds_found = "Found " + str(len(fullbody)) + " Pedestrians"
+        cv2.putText(frame,peds_found,(10, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
         cv2.imshow("HaarCascade", frame)
         cv2.waitKey(1)
         fps.update()
