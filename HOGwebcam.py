@@ -3,6 +3,7 @@ from __future__ import print_function
 from webcamThread import webcamThread
 from frames import frames
 from non_max_suppression import non_max_suppression
+from munkres import Munkres, print_matrix
 import numpy as np
 import argparse
 import imutils
@@ -28,9 +29,11 @@ def onPed(x, y):
     meas.append((x, y))
 
 
-def paint():
+def paint(tp, xA, yA, xB, yB):
     global frame, pred
-    for i in range(len(pred) - 1): cv2.line(frame, pred[i], pred[i + 1], (0, 0, 200))
+    # cv2.circle(frame, ((tp[0]), (tp[1])), 3, (0, 0, 255), -1)
+    cv2.rectangle(frame, ((((tp[0]) - ((xB - xA) / 2)), ((tp[1]) + (yB - yA) / 2))),
+                  (((tp[0]) + ((xB - xA) / 2)), ((tp[1]) - (yB - yA) / 2)), (0, 0, 255), 2)
 
 
 # created a *threaded* video stream, allow the camera sensor to warmup,
@@ -63,27 +66,25 @@ while fps._numFrames < args["num_frames"]:
 
     # draw the final bounding boxes
     for (xA, yA, xB, yB) in pick:
-        cv2.rectangle(frame, (xA, yA), (xB, yB), (0, 255, 0), 2)
-        #print((((xB - xA) / 2), ((yB - yA)) / 2))
-        #print(xA)
-        #print(yA)
-        #print(xB)
-        #print(yB) for debugging
-        centerX =  (xB + xA) / 2
-        centerY =  (yB + yA) / 2
-        cv2.circle(frame, (centerX,centerY), 3, (0, 0, 255), -1)
-        onPed(centerX,centerY)
+        # cv2.rectangle(frame, (xA, yA), (xB, yB), (0, 255, 0), 2)
+        # print((((xB - xA) / 2), ((yB - yA)) / 2))
+        # print(xA)
+        # print(yA)
+        # print(xB)
+        # print(yB) for debugging
+        centerX = (xB + xA) / 2
+        centerY = (yB + yA) / 2
+        onPed(centerX, centerY)
+        paint(tp, xA, yA, xB, yB)
 
     kalman.correct(mp)
     tp = kalman.predict()
     pred.append((int(tp[0]), int(tp[1])))
-    paint()
 
     peds_found = "Found " + str(len(pick)) + " Pedestrians"
     cv2.putText(frame, peds_found, (10, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
     # show the output images
     # check to see if the frame should be displayed to our screen
-    frame = imutils.resize(frame, width=1000)
     if args["display"] > 0:
         cv2.imshow("Frame", frame)
         cv2.waitKey(1)
