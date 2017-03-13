@@ -17,6 +17,8 @@ ap.add_argument("-d", "--display", type=int, default=-1,
                 help="Whether or not frames should be displayed")
 args = vars(ap.parse_args())
 
+i = 0
+objList = []
 meas = []
 pred = []
 mp = np.array((2, 1), np.float32)  # measurement
@@ -29,10 +31,16 @@ def onPed(x, y):
     meas.append((x, y))
 
 
+def updateKalman(mp):
+    global pred, tp
+    kalman.correct(mp)
+    tp = kalman.predict()
+    pred.append((int(tp[0]), int(tp[1])))
+
 def paint(tp, xA, yA, xB, yB):
     global frame, pred
-    # cv2.circle(frame, ((tp[0]), (tp[1])), 3, (0, 0, 255), -1)
-    cv2.rectangle(frame, ((((tp[0]) - ((xB - xA) / 2)), ((tp[1]) + (yB - yA) / 2))),
+    cv2.circle(frame, ((tp[0]), (tp[1])), 3, (0, 0, 255), -1)
+    cv2.rectangle(frame, ((tp[0]) - ((xB - xA) / 2), (tp[1]) + (yB - yA) / 2),
                   (((tp[0]) + ((xB - xA) / 2)), ((tp[1]) - (yB - yA) / 2)), (0, 0, 255), 2)
 
 
@@ -51,22 +59,23 @@ hog = cv2.HOGDescriptor()
 hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
 
 # loop over some frames...this time using the threaded stream
-while fps._numFrames < args["num_frames"]:
+while (True):
     # grab the frame from the threaded video stream and resize it
-    # to have a maximum width of 400 pixels
+    # to have a maximum width of 600 pixels
     frame = vs.read()
-    frame = imutils.resize(frame, width=400)
+    frame = imutils.resize(frame, width=600)
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     # detect people in the image
     (rects, weights) = hog.detectMultiScale(frame, winStride=(8, 8),
-                                            padding=(24, 24), scale=1.05)
+                                            padding=(32, 32), scale=1.05)
     rects = np.array([[x, y, x + w, y + h] for (x, y, w, h) in rects])
     pick = non_max_suppression(rects, probs=None, overlapThresh=0.65)
 
     # draw the final bounding boxes
     for (xA, yA, xB, yB) in pick:
-        # cv2.rectangle(frame, (xA, yA), (xB, yB), (0, 255, 0), 2)
+        i = i + 1
+        cv2.rectangle(frame, (xA, yA), (xB, yB), (0, 255, 0), 2)
         # print((((xB - xA) / 2), ((yB - yA)) / 2))
         # print(xA)
         # print(yA)
@@ -74,12 +83,11 @@ while fps._numFrames < args["num_frames"]:
         # print(yB) for debugging
         centerX = (xB + xA) / 2
         centerY = (yB + yA) / 2
+        # obj = object(centerX,centerY,i)
+        # objList.append(obj)
         onPed(centerX, centerY)
+        updateKalman(mp)
         paint(tp, xA, yA, xB, yB)
-
-    kalman.correct(mp)
-    tp = kalman.predict()
-    pred.append((int(tp[0]), int(tp[1])))
 
     peds_found = "Found " + str(len(pick)) + " Pedestrians"
     cv2.putText(frame, peds_found, (10, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
@@ -97,6 +105,7 @@ while fps._numFrames < args["num_frames"]:
 
 # stop the timer and display FPS information
 fps.stop()
+print(objList)
 print("[INFO] elasped time: {:.2f}".format(fps.elapsed()))
 print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
 
